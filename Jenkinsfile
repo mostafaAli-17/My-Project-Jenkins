@@ -7,26 +7,31 @@ pipeline{
         stage("build"){
              steps{
                 script{
-                    sh 'mvn clean package'
+                    sh 'docker build -t MY-PROJECT4 '
         }
       }   
     }
 
-    stages("test"){
+    stages("push"){
          steps{
            script{
-             echo "test in progress"  
+               withCredentials([usernamePassword(credentialsId: 'docker-hub', passwordVariable: 'Password', usernameVariable: 'Username')]) {
+               sh 'docker login --username $Username --password $Password'
+               sh 'docker tag MY-PROJECT4 $Username/MY-PROJECT4'
+               sh 'docker push $Username/MY-PROJECT4'
             }
         }
        }
     } 
-
-post {
-  success {
-    slackSend channel: '#jenkins-ci', message: "Build success ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)", teamDomain: 'dolfinedworld', tokenCredentialId: 'slack-notification'
+    stage("deploy"){
+        steps{
+          script{
+              withAWS(credentials: 'aws-ci', region: 'us-east-1') {
+              sh 'aws eks update-kubeconfig --region us-east-1 --name my-eks-cluster '
+              sh 'kubectl apply -f ./MY-PROJECT4/Deployment.yaml'
+          }
+        }
+      }
+    }
   }
-   failure {
-    slackSend channel: '#jenkins-ci', message: "Build failed ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)", teamDomain: 'dolfinedworld', tokenCredentialId: 'slack-notification'
-   }
- }       
 }
