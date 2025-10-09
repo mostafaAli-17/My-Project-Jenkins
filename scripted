@@ -1,0 +1,6 @@
+node{
+    git branch:'main', url: 'https://github.com/mostafaAli-17/My-Project-Jenkins.git'
+    stage('build'){
+        sh 'echo "duild in progress"
+    }
+}
